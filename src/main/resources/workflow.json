@@ -1,0 +1,109 @@
+[
+  {
+    "name": "hello_world_workflow",
+    "description": "Hello World",
+    "version": 1,
+    "schemaVersion": 2,
+    "inputParameters": [
+      "name"
+    ],
+    "tasks": [
+      {
+        "name": "hello_world",
+        "taskReferenceName": "hello_world_ref_1",
+        "inputParameters": {
+          "name": "${workflow.input.name}"
+        },
+        "type": "SIMPLE"
+      }
+    ]
+  },
+  {
+    "name": "decision_workflow",
+    "description": "Decision Workflow",
+    "version": 1,
+    "schemaVersion": 2,
+    "inputParameters": [
+      "movieType",
+      "movieId"
+    ],
+    "tasks": [
+      {
+        "name": "decide_task",
+        "taskReferenceName": "decide1",
+        "inputParameters": {
+          "case_value_param": "${workflow.input.movieType}"
+        },
+        "type": "DECISION",
+        "caseValueParam": "case_value_param",
+        "decisionCases": {
+          "Show": [
+            {
+              "name": "setup_episodes",
+              "taskReferenceName": "setup_episodes_ref_1",
+              "inputParameters": {
+                "movieId": "${workflow.input.movieId}"
+              },
+              "type": "SIMPLE"
+            },
+            {
+              "name": "generate_episode_artwork",
+              "taskReferenceName": "generate_episode_artwork_ref_1",
+              "inputParameters": {
+                "movieId": "${workflow.input.movieId}"
+              },
+              "type": "SIMPLE"
+            }
+          ],
+          "Movie": [
+            {
+              "name": "setup_movie",
+              "taskReferenceName": "setup_movie_ref_1",
+              "inputParameters": {
+                "movieId": "${workflow.input.movieId}"
+              },
+              "type": "SIMPLE"
+            },
+            {
+              "name": "generate_movie_artwork",
+              "taskReferenceName": "generate_movie_artwork_1",
+              "inputParameters": {
+                "movieId": "${workflow.input.movieId}"
+              },
+              "type": "SIMPLE"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "name": "weather_workflow",
+    "description": "Fetch current weather and send a notification",
+    "version": 1,
+    "schemaVersion": 2,
+    "inputParameters": [
+      "location"
+    ],
+    "tasks": [
+      {
+        "name": "fetch_weather",
+        "taskReferenceName": "fetch_weather_ref",
+        "inputParameters": {
+          "location": "${workflow.input.location}"
+        },
+        "type": "SIMPLE"
+      },
+      {
+        "name": "send_notification",
+        "taskReferenceName": "send_notification_ref",
+        "inputParameters": {
+          "location": "${fetch_weather_ref.output.location}",
+          "weather": "${fetch_weather_ref.output.weather}",
+          "message": "Weather in ${fetch_weather_ref.output.location} is ${fetch_weather_ref.output.weather.current.temperature}°C"
+        },
+        "type": "SIMPLE"
+      }
+    ]
+  }
+]

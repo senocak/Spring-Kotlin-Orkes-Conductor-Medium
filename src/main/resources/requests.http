@@ -1,0 +1,13 @@
+@baseUrl = http://localhost:8081
+
+### Hello World Test
+GET {{baseUrl}}/api/v1/helloworld/tcasenocak
+
+### Movie Show Test
+GET {{baseUrl}}/api/v1/movie/Show/movieId1
+
+### Movie Get Test
+GET {{baseUrl}}/api/v1/movie/Movie/movieId1
+
+### Weather Test
+GET {{baseUrl}}/api/v1/weather/Istanbul,TR

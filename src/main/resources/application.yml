@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: Spring Kotlin Conductor
+server:
+  port: 8081
+conductor:
+  url: http://localhost:9090/api/
+  threadCount: 5
+  timeOut: 10_000
