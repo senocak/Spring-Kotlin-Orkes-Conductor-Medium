@@ -1,1 +1,1 @@
-rootProject.name = "orkes"
+rootProject.name = "spring-orkes-conductor"
