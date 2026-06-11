@@ -1,4 +1,4 @@
-# Spring Kotlin Orkes Conductor
+# Beyond the Monolith: Workflow-Driven Order Processing with Orkes Conductor and Spring
 This project demonstrates Orkes Conductor with a real-time order fulfillment scenario. The main idea is to show how a business process can be split into small workers, registered as Conductor tasks, and connected by a workflow definition. The sample order flow validates the request, reserves inventory, processes payment, then either schedules delivery or compensates by releasing the reserved inventory.
 
 ## Core Scenario
