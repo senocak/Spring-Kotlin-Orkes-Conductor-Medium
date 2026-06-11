@@ -57,8 +57,8 @@ class WorkflowDefinition2(
             }
         }
 
-        val tasks: ResponseEntity<List<TaskDefinitionDto>> = restTemplate.exchange(url + TASK_DEF_PATH, HttpMethod.GET, null,
-            object : ParameterizedTypeReference<List<TaskDefinitionDto>>() {})
+        val tasks: ResponseEntity<List<TaskDefinitionDto>> = restTemplate.exchange(url + TASK_DEF_PATH, HttpMethod.GET,
+            null, object : ParameterizedTypeReference<List<TaskDefinitionDto>>() {})
         if (tasks.statusCode.is2xxSuccessful && tasks.body != null) {
             tasks.body!!.forEach { conductorTask: TaskDefinitionDto ->
                 val taskIterator: MutableIterator<Task> = taskList.iterator()

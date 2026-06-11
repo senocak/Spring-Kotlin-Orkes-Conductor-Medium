@@ -12,8 +12,8 @@ import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.boot.runApplication
 import org.springframework.context.event.EventListener
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 
@@ -37,28 +37,49 @@ class SpringKotlinConductorApplication(
 ) {
     @EventListener(value = [ApplicationReadyEvent::class])
     fun setup() {
-        workflowDefinition1.loadWorkflowsAndTasks(url = conductorProperties.url)
+        //workflowDefinition1.loadWorkflowsAndTasks(url = conductorProperties.url)
         workflowDefinition2.loadWorkflowsAndTasks(url = conductorProperties.url)
     }
 
-    @GetMapping(value = ["/helloworld/{name}"])
-    fun helloWorldTrigger(@PathVariable name: String): String =
-        triggerWorkflowByNameAndInput(workflowName = "hello_world_workflow", input = mapOf("name" to name))
-
-    @GetMapping(value = ["/movie/{movieType}/{movieId}"])
-    fun movieTrigger(@PathVariable movieType: String, @PathVariable movieId: String): String =
-        triggerWorkflowByNameAndInput(workflowName = "decision_workflow",
-            input = mapOf("movieType" to movieType, "movieId" to movieId))
-
-    @GetMapping(value = ["/weather/{location}"])
-    fun weatherTrigger(@PathVariable location: String): String =
-        triggerWorkflowByNameAndInput(workflowName = "weather_workflow", input = mapOf("location" to location))
+    @PostMapping(value = ["/orders"])
+    fun orderFulfillmentTrigger(@RequestBody request: OrderWorkflowRequest): String =
+        triggerWorkflowByNameAndInput(workflowName = "order_fulfillment_workflow", input = request.toWorkflowInput())
 
     private fun triggerWorkflowByNameAndInput(workflowName: String, input: Map<String, Any?>): String =
         StartWorkflowRequest()
-            .also {
+            .also { it: StartWorkflowRequest ->
                 it.input = input
                 it.withName(workflowName)
             }
             .run { workflowClient.startWorkflow(this) }
 }
+
+data class OrderWorkflowRequest(
+    val orderId: String,
+    val customerId: String,
+    val items: List<OrderItem>,
+    val totalAmount: Double,
+    val deliveryAddress: String,
+    val paymentMethod: String = "CARD",
+    val priority: String = "STANDARD",
+    val notificationChannel: String = "EMAIL"
+) {
+    fun toWorkflowInput(): Map<String, Any?> =
+        mapOf(
+            "orderId" to orderId,
+            "customerId" to customerId,
+            "items" to items,
+            "totalAmount" to totalAmount,
+            "deliveryAddress" to deliveryAddress,
+            "paymentMethod" to paymentMethod,
+            "priority" to priority,
+            "notificationChannel" to notificationChannel
+        )
+}
+
+data class OrderItem(
+    val sku: String,
+    val quantity: Int,
+    val price: Double,
+    val available: Boolean = true
+)

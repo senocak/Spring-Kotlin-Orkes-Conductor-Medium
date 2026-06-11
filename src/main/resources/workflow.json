@@ -1,108 +1,134 @@
 [
   {
-    "name": "hello_world_workflow",
-    "description": "Hello World",
+    "name": "order_fulfillment_workflow",
+    "description": "Real-world order fulfillment flow with payment decision, delivery scheduling, compensation, and customer notification",
     "version": 1,
     "schemaVersion": 2,
     "inputParameters": [
-      "name"
+      "orderId",
+      "customerId",
+      "items",
+      "totalAmount",
+      "deliveryAddress",
+      "paymentMethod",
+      "priority",
+      "notificationChannel"
     ],
     "tasks": [
       {
-        "name": "hello_world",
-        "taskReferenceName": "hello_world_ref_1",
+        "name": "validate_order",
+        "taskReferenceName": "validate_order_ref",
         "inputParameters": {
-          "name": "${workflow.input.name}"
-        },
-        "type": "SIMPLE"
-      }
-    ]
-  },
-  {
-    "name": "decision_workflow",
-    "description": "Decision Workflow",
-    "version": 1,
-    "schemaVersion": 2,
-    "inputParameters": [
-      "movieType",
-      "movieId"
-    ],
-    "tasks": [
-      {
-        "name": "decide_task",
-        "taskReferenceName": "decide1",
-        "inputParameters": {
-          "case_value_param": "${workflow.input.movieType}"
-        },
-        "type": "DECISION",
-        "caseValueParam": "case_value_param",
-        "decisionCases": {
-          "Show": [
-            {
-              "name": "setup_episodes",
-              "taskReferenceName": "setup_episodes_ref_1",
-              "inputParameters": {
-                "movieId": "${workflow.input.movieId}"
-              },
-              "type": "SIMPLE"
-            },
-            {
-              "name": "generate_episode_artwork",
-              "taskReferenceName": "generate_episode_artwork_ref_1",
-              "inputParameters": {
-                "movieId": "${workflow.input.movieId}"
-              },
-              "type": "SIMPLE"
-            }
-          ],
-          "Movie": [
-            {
-              "name": "setup_movie",
-              "taskReferenceName": "setup_movie_ref_1",
-              "inputParameters": {
-                "movieId": "${workflow.input.movieId}"
-              },
-              "type": "SIMPLE"
-            },
-            {
-              "name": "generate_movie_artwork",
-              "taskReferenceName": "generate_movie_artwork_1",
-              "inputParameters": {
-                "movieId": "${workflow.input.movieId}"
-              },
-              "type": "SIMPLE"
-            }
-          ]
-        }
-      }
-    ]
-  },
-  {
-    "name": "weather_workflow",
-    "description": "Fetch current weather and send a notification",
-    "version": 1,
-    "schemaVersion": 2,
-    "inputParameters": [
-      "location"
-    ],
-    "tasks": [
-      {
-        "name": "fetch_weather",
-        "taskReferenceName": "fetch_weather_ref",
-        "inputParameters": {
-          "location": "${workflow.input.location}"
+          "orderId": "${workflow.input.orderId}",
+          "customerId": "${workflow.input.customerId}",
+          "items": "${workflow.input.items}",
+          "totalAmount": "${workflow.input.totalAmount}",
+          "deliveryAddress": "${workflow.input.deliveryAddress}"
         },
         "type": "SIMPLE"
       },
       {
-        "name": "send_notification",
-        "taskReferenceName": "send_notification_ref",
+        "name": "reserve_inventory",
+        "taskReferenceName": "reserve_inventory_ref",
         "inputParameters": {
-          "location": "${fetch_weather_ref.output.location}",
-          "weather": "${fetch_weather_ref.output.weather}",
-          "message": "Weather in ${fetch_weather_ref.output.location} is ${fetch_weather_ref.output.weather.current.temperature}°C"
+          "orderId": "${validate_order_ref.output.orderId}",
+          "items": "${validate_order_ref.output.items}"
         },
         "type": "SIMPLE"
+      },
+      {
+        "name": "process_payment",
+        "taskReferenceName": "process_payment_ref",
+        "inputParameters": {
+          "orderId": "${validate_order_ref.output.orderId}",
+          "customerId": "${validate_order_ref.output.customerId}",
+          "totalAmount": "${validate_order_ref.output.totalAmount}",
+          "paymentMethod": "${workflow.input.paymentMethod}"
+        },
+        "type": "SIMPLE"
+      },
+      {
+        "name": "payment_decision",
+        "taskReferenceName": "payment_decision_ref",
+        "inputParameters": {
+          "payment_status": "${process_payment_ref.output.paymentStatus}"
+        },
+        "type": "DECISION",
+        "caseValueParam": "payment_status",
+        "decisionCases": {
+          "APPROVED": [
+            {
+              "name": "schedule_delivery",
+              "taskReferenceName": "schedule_delivery_ref",
+              "inputParameters": {
+                "orderId": "${validate_order_ref.output.orderId}",
+                "deliveryAddress": "${validate_order_ref.output.deliveryAddress}",
+                "priority": "${workflow.input.priority}"
+              },
+              "type": "SIMPLE"
+            },
+            {
+              "name": "send_order_notification",
+              "taskReferenceName": "send_order_confirmation_ref",
+              "inputParameters": {
+                "orderId": "${validate_order_ref.output.orderId}",
+                "customerId": "${validate_order_ref.output.customerId}",
+                "channel": "${workflow.input.notificationChannel}",
+                "status": "CONFIRMED",
+                "message": "Order ${validate_order_ref.output.orderId} is confirmed. Delivery ETA is ${schedule_delivery_ref.output.etaMinutes} minutes."
+              },
+              "type": "SIMPLE"
+            }
+          ],
+          "DECLINED": [
+            {
+              "name": "release_inventory",
+              "taskReferenceName": "release_inventory_ref",
+              "inputParameters": {
+                "orderId": "${validate_order_ref.output.orderId}",
+                "reservationId": "${reserve_inventory_ref.output.reservationId}",
+                "reason": "${process_payment_ref.output.reason}"
+              },
+              "type": "SIMPLE"
+            },
+            {
+              "name": "send_order_notification",
+              "taskReferenceName": "send_order_declined_ref",
+              "inputParameters": {
+                "orderId": "${validate_order_ref.output.orderId}",
+                "customerId": "${validate_order_ref.output.customerId}",
+                "channel": "${workflow.input.notificationChannel}",
+                "status": "PAYMENT_DECLINED",
+                "message": "Order ${validate_order_ref.output.orderId} could not be completed because payment was declined."
+              },
+              "type": "SIMPLE"
+            }
+          ]
+        },
+        "defaultCase": [
+          {
+            "name": "release_inventory",
+            "taskReferenceName": "release_inventory_default_ref",
+            "inputParameters": {
+              "orderId": "${validate_order_ref.output.orderId}",
+              "reservationId": "${reserve_inventory_ref.output.reservationId}",
+              "reason": "Unexpected payment status: ${process_payment_ref.output.paymentStatus}"
+            },
+            "type": "SIMPLE"
+          },
+          {
+            "name": "send_order_notification",
+            "taskReferenceName": "send_order_review_ref",
+            "inputParameters": {
+              "orderId": "${validate_order_ref.output.orderId}",
+              "customerId": "${validate_order_ref.output.customerId}",
+              "channel": "${workflow.input.notificationChannel}",
+              "status": "PENDING_REVIEW",
+              "message": "Order ${validate_order_ref.output.orderId} is pending manual review."
+            },
+            "type": "SIMPLE"
+          }
+        ]
       }
     ]
   }

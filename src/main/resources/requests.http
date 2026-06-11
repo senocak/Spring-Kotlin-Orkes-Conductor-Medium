@@ -1,13 +1,48 @@
 @baseUrl = http://localhost:8081
 
-### Hello World Test
-GET {{baseUrl}}/api/v1/helloworld/tcasenocak
+### Order Fulfillment - Approved Payment
+POST {{baseUrl}}/api/v1/orders
+Content-Type: application/json
 
-### Movie Show Test
-GET {{baseUrl}}/api/v1/movie/Show/movieId1
+{
+  "orderId": "ORD-1001",
+  "customerId": "CUS-42",
+  "items": [
+    {
+      "sku": "BOOK-001",
+      "quantity": 1,
+      "price": 24.99
+    },
+    {
+      "sku": "HEADPHONE-002",
+      "quantity": 1,
+      "price": 79.50
+    }
+  ],
+  "totalAmount": 104.49,
+  "deliveryAddress": "Levent, Istanbul",
+  "paymentMethod": "CARD",
+  "priority": "EXPRESS",
+  "notificationChannel": "EMAIL"
+}
 
-### Movie Get Test
-GET {{baseUrl}}/api/v1/movie/Movie/movieId1
+### Order Fulfillment - Declined Payment
+POST {{baseUrl}}/api/v1/orders
+Content-Type: application/json
 
-### Weather Test
-GET {{baseUrl}}/api/v1/weather/Istanbul,TR
+{
+  "orderId": "ORD-1002",
+  "customerId": "CUS-43",
+  "items": [
+    {
+      "sku": "PHONE-001",
+      "quantity": 1,
+      "price": 899.00
+    }
+  ],
+  "totalAmount": 899.00,
+  "deliveryAddress": "Kadikoy, Istanbul",
+  "paymentMethod": "DECLINED",
+  "priority": "STANDARD",
+  "notificationChannel": "SMS"
+}

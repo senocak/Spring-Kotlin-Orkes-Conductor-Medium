@@ -6,8 +6,16 @@ data class SimpleTaskDefinitions(
 
 data class SimpleTaskDefinition(
     val name: String,
+    val description: String? = null,
     val inputKeys: List<String> = emptyList(),
+    val outputKeys: List<String> = emptyList(),
     val retryCount: Int? = null,
+    val retryLogic: String? = null,
+    val retryDelaySeconds: Int? = null,
+    val responseTimeoutSeconds: Int? = null,
+    val timeoutSeconds: Int? = null,
+    val timeoutPolicy: String? = null,
+    val ownerEmail: String? = null,
     val type: String? = null
 ): BaseDto()
 

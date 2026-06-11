@@ -1,52 +1,135 @@
 [
   {
-    "name": "hello_world",
+    "name": "validate_order",
+    "description": "Validate order payload before starting fulfillment",
     "inputKeys": [
-      "name"
+      "orderId",
+      "customerId",
+      "items",
+      "totalAmount",
+      "deliveryAddress"
     ],
-    "retryCount": 3
-  },
-  {
-    "name": "setup_episodes",
-    "inputKeys": [
-      "movieId"
+    "outputKeys": [
+      "orderId",
+      "customerId",
+      "items",
+      "itemCount",
+      "totalAmount",
+      "deliveryAddress",
+      "validated"
     ],
+    "retryCount": 2,
+    "retryLogic": "FIXED",
+    "retryDelaySeconds": 5,
+    "responseTimeoutSeconds": 20,
+    "timeoutSeconds": 60,
+    "timeoutPolicy": "TIME_OUT_WF",
     "type": "SIMPLE"
   },
   {
-    "name": "generate_episode_artwork",
+    "name": "reserve_inventory",
+    "description": "Reserve inventory for the validated order",
     "inputKeys": [
-      "movieId"
+      "orderId",
+      "items"
     ],
+    "outputKeys": [
+      "inventoryReserved",
+      "reservationId",
+      "unavailableItems"
+    ],
+    "retryCount": 3,
+    "retryLogic": "EXPONENTIAL_BACKOFF",
+    "retryDelaySeconds": 5,
+    "responseTimeoutSeconds": 20,
+    "timeoutSeconds": 60,
+    "timeoutPolicy": "TIME_OUT_WF",
     "type": "SIMPLE"
   },
   {
-    "name": "setup_movie",
+    "name": "process_payment",
+    "description": "Authorize payment for the order",
     "inputKeys": [
-      "movieId"
+      "orderId",
+      "customerId",
+      "totalAmount",
+      "paymentMethod"
     ],
+    "outputKeys": [
+      "paymentStatus",
+      "transactionId",
+      "reason"
+    ],
+    "retryCount": 2,
+    "retryLogic": "FIXED",
+    "retryDelaySeconds": 10,
+    "responseTimeoutSeconds": 30,
+    "timeoutSeconds": 90,
+    "timeoutPolicy": "TIME_OUT_WF",
     "type": "SIMPLE"
   },
   {
-    "name": "generate_movie_artwork",
+    "name": "schedule_delivery",
+    "description": "Schedule courier delivery after payment approval",
     "inputKeys": [
-      "movieId"
+      "orderId",
+      "deliveryAddress",
+      "priority"
     ],
+    "outputKeys": [
+      "deliveryId",
+      "etaMinutes",
+      "courier"
+    ],
+    "retryCount": 2,
+    "retryLogic": "FIXED",
+    "retryDelaySeconds": 5,
+    "responseTimeoutSeconds": 20,
+    "timeoutSeconds": 60,
+    "timeoutPolicy": "TIME_OUT_WF",
     "type": "SIMPLE"
   },
   {
-    "name": "fetch_weather",
+    "name": "release_inventory",
+    "description": "Release reserved inventory when fulfillment cannot continue",
     "inputKeys": [
-      "location"
+      "orderId",
+      "reservationId",
+      "reason"
     ],
+    "outputKeys": [
+      "inventoryReleased",
+      "reason"
+    ],
+    "retryCount": 3,
+    "retryLogic": "EXPONENTIAL_BACKOFF",
+    "retryDelaySeconds": 5,
+    "responseTimeoutSeconds": 20,
+    "timeoutSeconds": 60,
+    "timeoutPolicy": "TIME_OUT_WF",
     "type": "SIMPLE"
   },
   {
-    "name": "send_notification",
+    "name": "send_order_notification",
+    "description": "Notify the customer about order status",
     "inputKeys": [
-      "location",
-      "weather"
+      "orderId",
+      "customerId",
+      "channel",
+      "status",
+      "message"
     ],
+    "outputKeys": [
+      "notified",
+      "channel",
+      "message"
+    ],
+    "retryCount": 3,
+    "retryLogic": "FIXED",
+    "retryDelaySeconds": 10,
+    "responseTimeoutSeconds": 20,
+    "timeoutSeconds": 60,
+    "timeoutPolicy": "TIME_OUT_WF",
     "type": "SIMPLE"
   }
 ]

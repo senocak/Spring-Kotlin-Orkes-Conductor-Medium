@@ -12,6 +12,7 @@ import org.springframework.http.MediaType
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
 import java.io.IOException
+import org.springframework.http.ResponseEntity
 
 @Service
 class WorkflowDefinition1(
@@ -24,10 +25,10 @@ class WorkflowDefinition1(
     private val workflows: MutableList<JsonNode> = ArrayList()
     private val headers: HttpHeaders = HttpHeaders().also { it.contentType = MediaType.APPLICATION_JSON }
 
-    @Throws(IOException::class)
+    @Throws(exceptionClasses = [IOException::class])
     fun loadWorkflowsAndTasks(url: String) {
-        val taskList = readTasks()
-        val workflowTaskNames = readTaskNameFromWorkflow()
+        val taskList: MutableList<Task> = readTasks()
+        val workflowTaskNames: List<Task> = readTaskNameFromWorkflow()
         checkTasksInWorkflow(taskList = taskList, workflowsTaskNames = workflowTaskNames)
         defineTasksInConductorServer(url = url, taskList = taskList)
         defineWorkflowsInConductorServer(url = url)
@@ -40,33 +41,33 @@ class WorkflowDefinition1(
     }
 
     private fun defineTasksInConductorServer(url: String, taskList: MutableList<Task>) {
-        val tasks = restTemplate.getForEntity(url + TASK_DEF_PATH, String::class.java)
-        if (tasks.statusCode.is2xxSuccessful && tasks.body != null) {
-            val conductorTasks = objectMapper.readTree(tasks.body) as ArrayNode
-            conductorTasks.forEach { jsonNode: JsonNode ->
-                val taskIterator = taskList.iterator()
-                while (taskIterator.hasNext()) {
-                    val task = taskIterator.next()
-                    if (jsonNode["name"].textValue() == task.name) {
-                        restTemplate.put(url + TASK_DEF_PATH, HttpEntity(task.jsonNode, headers))
-                        taskIterator.remove()
-                    }
+        val tasks: ResponseEntity<String?> = restTemplate.getForEntity(url + TASK_DEF_PATH, String::class.java)
+        if (!tasks.statusCode.is2xxSuccessful || tasks.body == null)
+            return
+        val conductorTasks: ArrayNode = objectMapper.readTree(tasks.body) as ArrayNode
+        conductorTasks.forEach { jsonNode: JsonNode ->
+            val taskIterator: MutableIterator<Task> = taskList.iterator()
+            while (taskIterator.hasNext()) {
+                val task: Task = taskIterator.next()
+                if (jsonNode["name"].textValue() == task.name) {
+                    restTemplate.put(url + TASK_DEF_PATH, HttpEntity(task.jsonNode, headers))
+                    taskIterator.remove()
                 }
             }
-            val arrayNode = ArrayNode(JsonNodeFactory.instance)
-            taskList.forEach { task: Task -> arrayNode.add(task.jsonNode) }
-            if (!arrayNode.isEmpty) {
-                val httpEntity = HttpEntity(arrayNode, headers)
-                //objectMapper.writeValueAsString(arrayNode)
-                restTemplate.postForObject(url + TASK_DEF_PATH, httpEntity, Void::class.java)
-            }
+        }
+        val arrayNode = ArrayNode(JsonNodeFactory.instance)
+        taskList.forEach { task: Task -> arrayNode.add(task.jsonNode) }
+        if (!arrayNode.isEmpty) {
+            val httpEntity: HttpEntity<ArrayNode> = HttpEntity(arrayNode, headers)
+            //objectMapper.writeValueAsString(arrayNode)
+            restTemplate.postForObject(url + TASK_DEF_PATH, httpEntity, Void::class.java)
         }
     }
 
     private fun checkTasksInWorkflow(taskList: List<Task>, workflowsTaskNames: List<Task>) {
-        workflowsTaskNames.forEach { workflowTask ->
+        workflowsTaskNames.forEach { workflowTask: Task ->
             if (workflowTask.type == "SIMPLE" &&
-                !workflowsTaskNames.any { wtn -> taskList.any { tl -> tl.name == wtn.name } }) {
+                !workflowsTaskNames.any { wtn: Task -> taskList.any { tl: Task -> tl.name == wtn.name } }) {
                 val message = "Workflow Task scan failed. Be careful about :$workflowTask"
                 println(message = message)
                 throw IllegalArgumentException(message)
@@ -76,7 +77,7 @@ class WorkflowDefinition1(
 
     private fun readTasks(): MutableList<Task> {
         val taskNames: MutableList<Task> = arrayListOf()
-        val jsonNode = objectMapper.readTree(javaClass.classLoader.getResource("task.json")) as ArrayNode
+        val jsonNode: ArrayNode = objectMapper.readTree(javaClass.classLoader.getResource("task.json")) as ArrayNode
         jsonNode.forEach { node: JsonNode ->
             taskNames.add(element = Task(name = node["name"].textValue(), type = "SIMPLE", jsonNode = node))
         }
@@ -84,11 +85,11 @@ class WorkflowDefinition1(
     }
 
     private fun readTaskNameFromWorkflow(): List<Task> {
-        val arrayNode = objectMapper.readTree(javaClass.classLoader.getResource("workflow.json")) as ArrayNode
+        val arrayNode: ArrayNode = objectMapper.readTree(javaClass.classLoader.getResource("workflow.json")) as ArrayNode
         val taskNames: MutableList<Task> = arrayListOf()
         arrayNode.elements().forEachRemaining { jsonNode: JsonNode ->
             workflows.add(element = jsonNode)
-            val lArrayNode = jsonNode["tasks"] as ArrayNode
+            val lArrayNode: ArrayNode = jsonNode["tasks"] as ArrayNode
             lArrayNode.forEach { node: JsonNode ->
                 taskNames.add(element = Task(name = node["name"].textValue(),
                     type = node["type"].textValue(), jsonNode = node))
